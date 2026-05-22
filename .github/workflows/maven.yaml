@@ -2,9 +2,9 @@ name: Java-Maven-Workflow
 
 on:
   push:
-    branches: ['main']
+    branches: ["main"]
   pull_request:
-    branches: ['main']
+    branches: ["main"]
 
 jobs:
   dependencies-run-tests:
@@ -14,25 +14,25 @@ jobs:
       - name: defined sdk
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
-          distribution: 'temurin'
+          java-version: "21"
+          distribution: "temurin"
           architecture: x64
           cache: maven
 
       - name: Maven install dependencies
         run: mvn clean install --batch-mode --update-snapshots verify
-        working-directory: ./App
+        working-directory: .
 
       - name: run test controllers
         run: mvn test
-        working-directory: ./App
+        working-directory: .
 
       - name: build
         run: mvn clean package
-        working-directory: ./App
+        working-directory: .
 
       - name: upload-jar
-        run: mkdir staging && cp -r ./App/target/*.jar staging
+        run: mkdir staging && cp -r ./target/*.jar staging
 
       - uses: actions/upload-artifact@v4
         with:
@@ -71,7 +71,7 @@ jobs:
         with:
           tag_name: v${{ github.run_number }}
           name: Release v${{ github.run_number }}
-          body: 'Automated release from main branch.'
+          body: "Automated release from main branch."
           files: ./deploy/*.jar # Matches the path from the download step
           draft: false
           prerelease: false
