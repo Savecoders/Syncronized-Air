@@ -1,0 +1,80 @@
+name: Java-Maven-Workflow
+
+on:
+  push:
+    branches: ['main']
+  pull_request:
+    branches: ['main']
+
+jobs:
+  dependencies-run-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: defined sdk
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          architecture: x64
+          cache: maven
+
+      - name: Maven install dependencies
+        run: mvn clean install --batch-mode --update-snapshots verify
+        working-directory: ./App
+
+      - name: run test controllers
+        run: mvn test
+        working-directory: ./App
+
+      - name: build
+        run: mvn clean package
+        working-directory: ./App
+
+      - name: upload-jar
+        run: mkdir staging && cp -r ./App/target/*.jar staging
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Package
+          path: staging
+
+  realise-jar-actions:
+    needs: dependencies-run-tests
+
+    if: ${{success() && github.ref == 'refs/heads/main'}}
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: download binary jar
+        uses: actions/download-artifact@v4
+        with:
+          name: Package
+          path: ./deploy
+      - name: show download file jar
+        run: ls -R ./deploy
+
+      - name: List downloaded files
+        run: |
+          echo "=== Archivos descargados ==="
+          ls -lhR ./deploy
+          echo ""
+          echo "=== Verificando ejecutabilidad del JAR ==="
+          java -jar ./deploy/*.jar --version 2>&1 || echo "JAR no ejecutable directamente"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: Release v${{ github.run_number }}
+          body: 'Automated release from main branch.'
+          files: ./deploy/*.jar # Matches the path from the download step
+          draft: false
+          prerelease: false
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
