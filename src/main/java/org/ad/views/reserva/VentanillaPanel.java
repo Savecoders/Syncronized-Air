@@ -11,7 +11,8 @@ public class VentanillaPanel extends JPanel {
 
   private final JComboBox<User> clienteCombo;
   private final JSpinner asientoSpinner;
-  private final JTextArea logArea;
+  private final JTextPane logArea;
+  private final java.util.List<String> logEntries = new java.util.ArrayList<>();
   private final ReservaController reservaController;
   private final UserController userController;
   private final int index;
@@ -21,7 +22,14 @@ public class VentanillaPanel extends JPanel {
     this.userController = userController;
     this.index = index;
     setBackground(Color.WHITE);
-    setBorder(BorderFactory.createTitledBorder(titulo));
+    setBorder(BorderFactory.createTitledBorder(
+        BorderFactory.createLineBorder(new Color(226, 232, 240), 1, true),
+        titulo,
+        javax.swing.border.TitledBorder.LEFT,
+        javax.swing.border.TitledBorder.TOP,
+        new Font("Arial", Font.BOLD, 12),
+        new Color(71, 85, 105) // Slate-600
+    ));
     setLayout(new BorderLayout(5, 5));
 
     JPanel form = new JPanel(new GridBagLayout());
@@ -62,13 +70,19 @@ public class VentanillaPanel extends JPanel {
     btnPanel.add(cambiarBtn);
     add(btnPanel, BorderLayout.CENTER);
 
-    logArea = new JTextArea(6, 15);
+    logArea = new JTextPane();
+    logArea.setContentType("text/html");
     logArea.setEditable(false);
-    logArea.setFont(new Font("Monospaced", Font.PLAIN, 10));
+    logArea.setBackground(new Color(13, 12, 12));
+    logArea.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+
     JScrollPane scroll = new JScrollPane(logArea);
-    scroll.getViewport().setBackground(Color.WHITE);
-    scroll.setPreferredSize(new Dimension(200, 100));
+    scroll.getViewport().setBackground(new Color(13, 12, 12));
+    scroll.setBorder(BorderFactory.createLineBorder(new Color(13, 12, 12), 1));
+    scroll.setPreferredSize(new Dimension(200, 120));
     add(scroll, BorderLayout.SOUTH);
+
+    updateLogView();
   }
 
   public void refrescarClientes() {
@@ -150,7 +164,51 @@ public class VentanillaPanel extends JPanel {
   public void appendLog(String msg) {
     String timestamp = java.time.LocalTime.now()
         .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"));
-    logArea.append("[" + timestamp + "] " + msg + "\n");
-    logArea.setCaretPosition(logArea.getDocument().getLength());
+
+    String color = "#e2e8f0";
+    String msgLower = msg.toLowerCase();
+
+    if (msgLower.contains("error") || msgLower.contains("invalido") || msgLower.contains("seleccione")
+        || msgLower.contains("fallo")) {
+      color = "#f87171"; // soft red
+    } else if (msgLower.contains("reservado") || msgLower.contains("eliminada") || msgLower.contains("cambiado")
+        || msgLower.contains("exito")) {
+      color = "#34d399"; // soft green
+    } else if (msgLower.contains("espera") || msgLower.contains("cola") || msgLower.contains("esperando")) {
+      color = "#fbbf24"; // soft amber/yellow
+    }
+
+    String escapedMsg = msg.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    String formattedLine = String.format(
+        "<div style='margin-bottom: 2px;'><span style='color: #64748b; font-weight: bold;'>[%s]</span> <span style='color: %s;'>%s</span></div>",
+        timestamp, color, escapedMsg);
+
+    logEntries.add(formattedLine);
+    if (logEntries.size() > 100) {
+      logEntries.remove(0);
+    }
+
+    updateLogView();
+  }
+
+  private void updateLogView() {
+    StringBuilder html = new StringBuilder();
+    html.append(
+        "<html><body style='font-family: Consolas, \"Courier New\", Monospaced; font-size: 10px; background-color: #010101; margin: 3px; padding: 0;'>");
+    for (String entry : logEntries) {
+      html.append(entry);
+    }
+    html.append("</body></html>");
+    logArea.setText(html.toString());
+
+    // Auto scroll to bottom
+    SwingUtilities.invokeLater(() -> {
+      logArea.setCaretPosition(logArea.getDocument().getLength());
+    });
+  }
+
+  public void clearLog() {
+    logEntries.clear();
+    updateLogView();
   }
 }

@@ -33,9 +33,16 @@ public class ReservaController {
   }
 
   public void refrescarVistas() {
-    if (mainFrame != null) {
+    if (mainFrame != null)
       mainFrame.refrescarTodo();
-    }
+  }
+
+  public boolean isModoSincronizado() {
+    return reservaService.isModoSincronizado();
+  }
+
+  public void setModoSincronizado(boolean modoSincronizado) {
+    reservaService.setModoSincronizado(modoSincronizado);
   }
 
   public String reservarAsiento(String cedula, int asiento) {
@@ -58,9 +65,8 @@ public class ReservaController {
   }
 
   public String cambiarAsiento(String cedula, int oldAsiento, int newAsiento) {
-    if (oldAsiento < 1 || oldAsiento > 30 || newAsiento < 1 || newAsiento > 30) {
+    if (oldAsiento < 1 || oldAsiento > 30 || newAsiento < 1 || newAsiento > 30)
       return "Los asientos deben estar entre 1 y 30.";
-    }
     User user = userService.buscarPorCedula(cedula).orElse(null);
     if (user == null)
       return "Cliente no encontrado.";

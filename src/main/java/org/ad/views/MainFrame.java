@@ -19,6 +19,8 @@ public class MainFrame extends JFrame {
   private final AsientosMapPanel asientosMapPanel;
   private final WaitListPanel waitListPanel;
 
+  private JToggleButton modoToggle;
+
   public MainFrame(ReservaController reservaController, UserController userController) {
     super("Sistema de Reserva de Asientos - Vuelo AD");
     this.reservaController = reservaController;
@@ -34,7 +36,7 @@ public class MainFrame extends JFrame {
     initCenterPanel();
     initBottomPanel();
 
-    setSize(1100, 750);
+    setSize(1100, 780);
     setLocationRelativeTo(null);
   }
 
@@ -53,21 +55,47 @@ public class MainFrame extends JFrame {
     JPanel center = new JPanel(new BorderLayout(10, 10));
     center.setBackground(Color.WHITE);
 
+    JPanel controlPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 5));
+    controlPanel.setBackground(Color.WHITE);
+    controlPanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0));
+
+    // Botón de simulación
     JButton simularBtn = new JButton("SIMULAR CONCURRENCIA");
-    simularBtn.setFont(new Font("Arial", Font.BOLD, 14));
+    simularBtn.setFont(new Font("Arial", Font.BOLD, 13));
     simularBtn.addActionListener(e -> reservaController.simularConcurrencia());
-    JPanel simPanel = new JPanel(new FlowLayout());
-    simPanel.setBackground(Color.WHITE);
-    simPanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
-    simPanel.add(simularBtn);
-    center.add(simPanel, BorderLayout.NORTH);
+
+    // Toggle de modo
+    modoToggle = new JToggleButton("Modo: Exclusión Mutua");
+    modoToggle.setSelected(false); // false = sincronizado activo (etiqueta positiva)
+    modoToggle.setFont(new Font("Arial", Font.BOLD, 12));
+    modoToggle.setForeground(new Color(0, 128, 0));
+    modoToggle.setBackground(new Color(220, 255, 220));
+    modoToggle.addActionListener(e -> toggleModo());
+
+    // Botón de limpiar logs
+    JButton limpiarLogsBtn = new JButton("Limpiar Logs de Ventanillas");
+    limpiarLogsBtn.setFont(new Font("Arial", Font.BOLD, 12));
+    limpiarLogsBtn.setForeground(new Color(71, 85, 105)); // Slate-600
+    limpiarLogsBtn.setBackground(new Color(241, 245, 249)); // Slate-100
+    limpiarLogsBtn.setBorder(BorderFactory.createCompoundBorder(
+        BorderFactory.createLineBorder(new Color(203, 213, 225), 1),
+        BorderFactory.createEmptyBorder(5, 10, 5, 10)));
+    limpiarLogsBtn.setFocusPainted(false);
+    limpiarLogsBtn.addActionListener(e -> limpiarTodosLosLogs());
+
+    controlPanel.add(simularBtn);
+    controlPanel.add(Box.createHorizontalStrut(20));
+    controlPanel.add(modoToggle);
+    controlPanel.add(Box.createHorizontalStrut(20));
+    controlPanel.add(limpiarLogsBtn);
+
+    center.add(controlPanel, BorderLayout.NORTH);
 
     JScrollPane seatScroll = new JScrollPane(asientosMapPanel);
     seatScroll.getViewport().setBackground(Color.WHITE);
     JScrollPane waitScroll = new JScrollPane(waitListPanel);
     waitScroll.getViewport().setBackground(Color.WHITE);
-    JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
-        seatScroll, waitScroll);
+    JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, seatScroll, waitScroll);
     split.setBackground(Color.WHITE);
     split.setResizeWeight(0.6);
     split.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
@@ -100,6 +128,26 @@ public class MainFrame extends JFrame {
     add(bottom, BorderLayout.SOUTH);
   }
 
+  private void toggleModo() {
+    boolean nuevoModoSync = !reservaController.isModoSincronizado();
+    reservaController.setModoSincronizado(nuevoModoSync);
+    actualizarIndicadorModo(nuevoModoSync);
+  }
+
+  private void actualizarIndicadorModo(boolean modoSync) {
+    if (modoSync) {
+      modoToggle.setText("Modo: Exclusión Mutua");
+      modoToggle.setForeground(new Color(0, 128, 0));
+      modoToggle.setBackground(new Color(220, 255, 220));
+      modoToggle.setSelected(false);
+    } else {
+      modoToggle.setText("Modo: SIN Exclusión Mutua");
+      modoToggle.setForeground(new Color(180, 0, 0));
+      modoToggle.setBackground(new Color(255, 220, 220));
+      modoToggle.setSelected(true);
+    }
+  }
+
   public void refrescarTodo() {
     asientosMapPanel.actualizar(reservaController.getMapaAsientos());
     waitListPanel.actualizar(reservaController.getListaEspera());
@@ -111,6 +159,14 @@ public class MainFrame extends JFrame {
   public void appendLog(int ventanillaIdx, String msg) {
     if (ventanillaIdx >= 0 && ventanillaIdx < ventanillas.length) {
       ventanillas[ventanillaIdx].appendLog(msg);
+    }
+  }
+
+  public void limpiarTodosLosLogs() {
+    for (VentanillaPanel v : ventanillas) {
+      if (v != null) {
+        v.clearLog();
+      }
     }
   }
 }
